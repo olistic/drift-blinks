@@ -9,16 +9,25 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@drift-labs/sdk": "^2.96.0-beta.8",
+    "@solana/actions": "^1.6.1",
+    "@solana/spl-token": "^0.1.8",
+    "@solana/web3.js": "1.92.3",
+    "next": "14.2.13",
     "react": "^18",
-    "react-dom": "^18",
-    "next": "14.2.13"
+    "react-dom": "^18"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
-    "eslint-config-next": "14.2.13"
-  }
+    "eslint-config-next": "14.2.13",
+    "prettier": "3.3.3",
+    "typescript": "^5"
+  },
+  "resolutions": {
+    "@solana/web3.js": "^1.92.3"
+  },
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }
