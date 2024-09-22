@@ -3,13 +3,11 @@
 import {
   BASE_PRECISION,
   DRIFT_PROGRAM_ID,
-  PRICE_PRECISION,
   BulkAccountLoader,
   DriftClient,
   MarketType,
   PositionDirection,
   PublicKey,
-  calculateBidAskPrice,
   getMarketOrderParams,
   getMarketsAndOraclesForSubscription,
   getOrderParams,
@@ -24,9 +22,8 @@ import {
   SUB_ACCOUNT_ID,
   USDC_MARKET_INDEX,
   USDC_MINT_ADDRESS,
-  USDC_PRECISION,
 } from '@/constants';
-import { BN, roundDown } from '@/utils/amount';
+import { BN } from '@/utils/amount';
 import { getTokenAddress } from '@/utils/tokens';
 import { type BetOutcome } from '@/types';
 
@@ -162,26 +159,28 @@ export function getLandoMarketOrderParams(
   const direction =
     outcome === 'yes' ? PositionDirection.LONG : PositionDirection.SHORT;
 
-  const [bid, ask] = calculateBidAskPrice(
-    driftClient.getPerpMarketAccount(LANDO_F1_SGP_WIN_BET_MARKET_INDEX)!.amm,
-    driftClient.getOracleDataForPerpMarket(LANDO_F1_SGP_WIN_BET_MARKET_INDEX),
-  );
-  // If user is going long then they are hitting asks, and vice-versa.
-  const priceToUse = direction === PositionDirection.LONG ? ask : bid;
+  // FIXME: baseAssetAmount calculation.
 
-  const amountWithBuffer = amount.sub(new BN(1).mul(USDC_PRECISION));
+  // const [bid, ask] = calculateBidAskPrice(
+  //   driftClient.getPerpMarketAccount(LANDO_F1_SGP_WIN_BET_MARKET_INDEX)!.amm,
+  //   driftClient.getOracleDataForPerpMarket(LANDO_F1_SGP_WIN_BET_MARKET_INDEX),
+  // );
+  // // If user is going long then they are hitting asks, and vice-versa.
+  // const priceToUse = direction === PositionDirection.LONG ? ask : bid;
 
-  const baseAssetAmount = roundDown(
-    amountWithBuffer
-      .mul(BASE_PRECISION) // For base precision output.
-      .mul(PRICE_PRECISION) // Account for the following division by price.
-      .div(priceToUse) // Divide by price.
-      .div(USDC_PRECISION), // Account for the deposit amount precision.
-    BASE_PRECISION,
-  );
+  // const amountWithBuffer = amount.sub(new BN(1).mul(USDC_PRECISION));
+
+  // const baseAssetAmount = roundDown(
+  //   amountWithBuffer
+  //     .mul(BASE_PRECISION) // For base precision output.
+  //     .mul(PRICE_PRECISION) // Account for the following division by price.
+  //     .div(priceToUse) // Divide by price.
+  //     .div(USDC_PRECISION), // Account for the deposit amount precision.
+  //   BASE_PRECISION,
+  // );
 
   return getMarketOrderParams({
-    baseAssetAmount,
+    baseAssetAmount: new BN(1).mul(BASE_PRECISION),
     direction,
     marketIndex: LANDO_F1_SGP_WIN_BET_MARKET_INDEX,
   });
