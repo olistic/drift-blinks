@@ -14,7 +14,6 @@ import {
   getMarketsAndOraclesForSubscription,
   getOrderParams,
   getUserAccountPublicKey,
-  type BN,
   type IWallet,
 } from '@drift-labs/sdk';
 import { Connection, Keypair, Transaction } from '@solana/web3.js';
@@ -27,7 +26,7 @@ import {
   USDC_MINT_ADDRESS,
   USDC_PRECISION,
 } from '@/constants';
-import { roundDown } from '@/utils/amount';
+import { BN, roundDown } from '@/utils/amount';
 import { getTokenAddress } from '@/utils/tokens';
 import { type BetOutcome } from '@/types';
 
@@ -170,8 +169,10 @@ export function getLandoMarketOrderParams(
   // If user is going long then they are hitting asks, and vice-versa.
   const priceToUse = direction === PositionDirection.LONG ? ask : bid;
 
+  const amountWithBuffer = amount.sub(new BN(1).mul(USDC_PRECISION));
+
   const baseAssetAmount = roundDown(
-    amount
+    amountWithBuffer
       .mul(BASE_PRECISION) // For base precision output.
       .mul(PRICE_PRECISION) // Account for the following division by price.
       .div(priceToUse) // Divide by price.

@@ -25,7 +25,7 @@ export const GET = async (req: Request) => {
   try {
     const requestUrl = new URL(req.url);
 
-    const iconHref = new URL('/icon-bet.png', requestUrl.origin).toString();
+    const iconHref = new URL('/icon-bet.jpg', requestUrl.origin).toString();
     const baseHref = new URL('/api/actions/bet', requestUrl.origin).toString();
 
     const payload: ActionGetResponse = {
@@ -120,7 +120,7 @@ export const POST = async (req: Request) => {
     });
   } catch (err) {
     console.log(err);
-    let message = 'Oops! Something went wrong, please try again';
+    let message = 'Oops! Something went wrong, please try again.';
     if (typeof err == 'string') message = err;
     return createErrorResponse(message);
   }
@@ -135,12 +135,12 @@ async function validateInput(req: Request) {
   try {
     account = new PublicKey(body.account);
   } catch {
-    throw 'Invalid "account" provided';
+    throw 'Invalid "account" provided.';
   }
 
   const outcomeParam = requestUrl.searchParams.get('outcome');
   if (outcomeParam !== 'yes' && outcomeParam !== 'no') {
-    throw 'Invalid "outcome" provided';
+    throw 'Invalid "outcome" provided.';
   }
   const outcome: BetOutcome = outcomeParam;
 
@@ -149,7 +149,7 @@ async function validateInput(req: Request) {
     const amountParam = requestUrl.searchParams.get('amount')!;
     amount = parseAmount(amountParam);
   } catch {
-    throw 'Invalid "amount" provided';
+    throw 'Invalid "amount" provided.';
   }
 
   return { account, outcome, amount };
