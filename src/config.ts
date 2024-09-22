@@ -5,7 +5,7 @@ export const DRIFT_ENV: DriftEnv = 'mainnet-beta';
 export const PRIORITY_FEE_SUBSCRIPTION_ADDRESSES = [
   DRIFT_PROGRAM_ID.toString(),
   '6gMq3mRCKf8aP3ttTyYhuijVZ2LGi14oDsBbkgubfLB3', // USDC.
-  // TODOL Add LANDO perp market.
+  // TODO: Add LANDO-F1-SGP-WIN-BET market account.
 ];
 
 export const HELIUS_RPC =

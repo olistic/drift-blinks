@@ -1,6 +1,6 @@
 import { BN } from '@drift-labs/sdk';
 
-const USDC_PRECISION = new BN(10).pow(new BN(6));
+import { USDC_PRECISION } from '../constants';
 
 export function parseAmount(amountString: string): BN {
   if (isNaN(+amountString)) {
@@ -8,6 +8,10 @@ export function parseAmount(amountString: string): BN {
   }
 
   return new BN(+amountString).mul(USDC_PRECISION);
+}
+
+export function roundDown(amount: BN, precision: BN): BN {
+  return amount.div(precision).mul(precision);
 }
 
 export { BN };

@@ -1,24 +1,22 @@
 import {
-  ActionPostResponse,
-  createPostResponse,
-  ActionGetResponse,
-  ActionPostRequest,
   createActionHeaders,
+  createPostResponse,
+  type ActionGetResponse,
+  type ActionPostRequest,
+  type ActionPostResponse,
 } from '@solana/actions';
-import { PublicKey, Transaction } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 
-import { parseAmount, BN } from '../../../../utils/amounts';
+import { SUB_ACCOUNT_ID } from '@/constants';
+import type { BetOutcome } from '@/types';
+import { parseAmount, BN } from '@/utils/amount';
 import {
+  createDepositCollateralTransaction,
   createDriftClient,
-  getLandoMarketOrderParams,
-  initializeDriftSDK,
-} from '../../../../utils/drift';
-import { getHeliusPriorityFees } from '../../../../utils/helius';
-import { clamp } from '../../../../utils/math';
-import { getTokenAddress } from '../../../../utils/tokens';
-
-// Initialize the Drift SDK.
-const sdkConfig = initializeDriftSDK();
+  createPlacePerpMarketOrderInstruction,
+} from '@/utils/drift';
+import { getHeliusPriorityFees } from '@/utils/helius';
+import { clamp } from '@/utils/math';
 
 // Create the standard headers for this route (including CORS).
 const headers = createActionHeaders();
@@ -27,36 +25,23 @@ export const GET = async (req: Request) => {
   try {
     const requestUrl = new URL(req.url);
 
+    const iconHref = new URL('/icon-bet.png', requestUrl.origin).toString();
     const baseHref = new URL('/api/actions/bet', requestUrl.origin).toString();
 
     const payload: ActionGetResponse = {
       title: 'Place your F1 bet',
-      icon: new URL('/icon-bet.png', requestUrl.origin).toString(),
+      icon: iconHref,
       description: 'Will Lando Norris win the 2024 Singapore GP?',
       label: '', // Ignored since `links.actions` exists.
       links: {
         actions: [
           {
             label: 'Bet YES',
-            href: `${baseHref}?outcome=yes&amount={amount}`,
-            parameters: [
-              {
-                name: 'amount',
-                label: 'Enter a USDC amount',
-                required: true,
-              },
-            ],
+            href: `${baseHref}?outcome=yes&amount=5`,
           },
           {
             label: 'Bet NO',
-            href: `${baseHref}?outcome=no&amount={amount}`,
-            parameters: [
-              {
-                name: 'amount',
-                label: 'Enter a USDC amount',
-                required: true,
-              },
-            ],
+            href: `${baseHref}?outcome=no&amount=5`,
           },
         ],
       },
@@ -82,99 +67,44 @@ export const OPTIONS = async () => {
 
 export const POST = async (req: Request) => {
   try {
-    const requestUrl = new URL(req.url);
-
-    const body: ActionPostRequest = await req.json();
-
     // Validate the client provided input.
-
-    let account: PublicKey;
-    try {
-      account = new PublicKey(body.account);
-    } catch {
-      return createErrorResponse('Invalid "account" provided');
-    }
-
-    const outcomeParam = requestUrl.searchParams.get('outcome');
-    if (outcomeParam !== 'yes' && outcomeParam !== 'no') {
-      return createErrorResponse('Invalid "outcome" provided');
-    }
-    const outcome: 'yes' | 'no' = outcomeParam;
-
-    let amount: BN;
-    try {
-      const amountParam = requestUrl.searchParams.get('amount')!;
-      amount = parseAmount(amountParam);
-    } catch {
-      return createErrorResponse('Invalid "amount" provided');
-    }
+    const { account, outcome, amount } = await validateInput(req);
 
     // Get the priority fee.
     const priorityFeePromise = getHeliusPriorityFees();
 
     // Set up the Drift client.
     const driftClient = await createDriftClient(account);
-
     await driftClient.subscribe();
 
-    // Get the USDC token account.
-    const tokenAccount = await getTokenAddress(
-      sdkConfig.USDC_MINT_ADDRESS,
-      account.toString(),
-    );
-
-    // Check if user account exists for the current wallet.
+    // Check if user account exists.
     const userAccounts = await driftClient.getUserAccountsForAuthority(account);
     const userAccountExists = userAccounts.length > 0;
 
-    // Build the transaction.
+    if (userAccountExists) {
+      await driftClient.switchActiveUser(SUB_ACCOUNT_ID);
+    }
 
     // Get transaction parameters.
     const priorityFee = await priorityFeePromise;
     const computeUnitsPrice = clamp(Math.round(priorityFee), 50_000, 1_000_000);
 
-    let transaction: Transaction;
-
-    if (userAccountExists) {
-      const firstUserAccount = userAccounts[0];
-
-      await driftClient.switchActiveUser(firstUserAccount.subAccountId);
-
-      transaction = (await driftClient.createDepositTxn(
-        amount,
-        0, // marketIndex
-        tokenAccount,
-        0, // subAccountId
-        false, // reduceOnly
-        {
-          computeUnits: 100_000,
-          computeUnitsPrice: computeUnitsPrice,
-        },
-      )) as Transaction;
-    } else {
-      // Create accounts and deposit collateral atomically.
-      [transaction] =
-        (await driftClient.createInitializeUserAccountAndDepositCollateral(
-          amount,
-          tokenAccount,
-          0, // marketIndex
-          0, // subAccountId
-          undefined, // name
-          undefined, // fromSubAccountId
-          undefined, // referrerInfo
-          undefined, // donateAmount
-          {
-            computeUnits: 200_000,
-            computeUnitsPrice: computeUnitsPrice,
-          },
-        )) as [Transaction, PublicKey];
-    }
-
-    // Add place perp order IXs.
-    const perpOrderIx = await driftClient.getPlacePerpOrderIx(
-      getLandoMarketOrderParams(amount, outcome),
+    // Build the transaction.
+    const transaction = await createDepositCollateralTransaction(
+      driftClient,
+      account,
+      amount,
+      {
+        initializeUserAccount: !userAccountExists,
+        computeUnitsPrice,
+      },
     );
-    transaction.add(perpOrderIx);
+    const placeOrderInstruction = await createPlacePerpMarketOrderInstruction(
+      driftClient,
+      amount,
+      outcome,
+    );
+    transaction.add(placeOrderInstruction);
 
     // Set the fee payer.
     transaction.feePayer = account;
@@ -195,6 +125,35 @@ export const POST = async (req: Request) => {
     return createErrorResponse(message);
   }
 };
+
+async function validateInput(req: Request) {
+  const body: ActionPostRequest = await req.json();
+
+  const requestUrl = new URL(req.url);
+
+  let account: PublicKey;
+  try {
+    account = new PublicKey(body.account);
+  } catch {
+    throw 'Invalid "account" provided';
+  }
+
+  const outcomeParam = requestUrl.searchParams.get('outcome');
+  if (outcomeParam !== 'yes' && outcomeParam !== 'no') {
+    throw 'Invalid "outcome" provided';
+  }
+  const outcome: BetOutcome = outcomeParam;
+
+  let amount: BN;
+  try {
+    const amountParam = requestUrl.searchParams.get('amount')!;
+    amount = parseAmount(amountParam);
+  } catch {
+    throw 'Invalid "amount" provided';
+  }
+
+  return { account, outcome, amount };
+}
 
 function createErrorResponse(message: string) {
   return new Response(message, {
