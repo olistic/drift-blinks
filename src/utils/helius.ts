@@ -1,6 +1,8 @@
-import { HELIUS_RPC, PRIORITY_FEE_SUBSCRIPTION_ADDRESSES } from '../config';
+import { HELIUS_RPC } from '@/config';
 
-export const getHeliusPriorityFees = async (): Promise<number> => {
+export const getHeliusPriorityFees = async (
+  addresses: string[],
+): Promise<number> => {
   try {
     const response = await fetch(HELIUS_RPC, {
       method: 'POST',
@@ -11,7 +13,7 @@ export const getHeliusPriorityFees = async (): Promise<number> => {
         method: 'getPriorityFeeEstimate',
         params: [
           {
-            accountKeys: PRIORITY_FEE_SUBSCRIPTION_ADDRESSES,
+            accountKeys: addresses,
             options: {
               includeAllPriorityFeeLevels: true,
             },

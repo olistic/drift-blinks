@@ -2,6 +2,7 @@
 
 import {
   BASE_PRECISION,
+  BN,
   DRIFT_PROGRAM_ID,
   BulkAccountLoader,
   DriftClient,
@@ -16,16 +17,17 @@ import {
 } from '@drift-labs/sdk';
 import { Connection, Keypair, Transaction } from '@solana/web3.js';
 
-import { DRIFT_ENV, SOLANA_RPC } from '@/config';
+import { SOLANA_RPC } from '@/config';
+import { getTokenAddress } from '@/utils/tokens';
 import {
+  DRIFT_ENV,
   LANDO_F1_SGP_WIN_BET_MARKET_INDEX,
   SUB_ACCOUNT_ID,
   USDC_MARKET_INDEX,
   USDC_MINT_ADDRESS,
-} from '@/constants';
-import { BN } from '@/utils/amount';
-import { getTokenAddress } from '@/utils/tokens';
-import { type BetOutcome } from '@/types';
+  USDC_PRECISION,
+} from './constants';
+import { type BetOutcome } from './types';
 
 export function createThrowawayWallet(publicKey?: PublicKey): IWallet {
   const newKeypair = publicKey
@@ -185,3 +187,17 @@ export function getLandoMarketOrderParams(
     marketIndex: LANDO_F1_SGP_WIN_BET_MARKET_INDEX,
   });
 }
+
+export function parseAmount(amountString: string): BN {
+  if (isNaN(+amountString)) {
+    throw new Error('Invalid amount');
+  }
+
+  return new BN(+amountString).mul(USDC_PRECISION);
+}
+
+export function roundDown(amount: BN, precision: BN): BN {
+  return amount.div(precision).mul(precision);
+}
+
+export { BN };

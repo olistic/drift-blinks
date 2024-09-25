@@ -7,16 +7,20 @@ import {
 } from '@solana/actions';
 import { PublicKey } from '@solana/web3.js';
 
-import { SUB_ACCOUNT_ID } from '@/constants';
-import type { BetOutcome } from '@/types';
-import { parseAmount, BN } from '@/utils/amount';
+import { getHeliusPriorityFees } from '@/utils/helius';
+import { clamp } from '@/utils/math';
 import {
+  PRIORITY_FEE_SUBSCRIPTION_ADDRESSES,
+  SUB_ACCOUNT_ID,
+} from './constants';
+import type { BetOutcome } from './types';
+import {
+  BN,
   createDepositCollateralTransaction,
   createDriftClient,
   createPlacePerpMarketOrderInstruction,
-} from '@/utils/drift';
-import { getHeliusPriorityFees } from '@/utils/helius';
-import { clamp } from '@/utils/math';
+  parseAmount,
+} from './utils';
 
 // Create the standard headers for this route (including CORS).
 const headers = createActionHeaders();
@@ -25,8 +29,14 @@ export const GET = async (req: Request) => {
   try {
     const requestUrl = new URL(req.url);
 
-    const iconHref = new URL('/icon-bet.jpg', requestUrl.origin).toString();
-    const baseHref = new URL('/api/actions/bet', requestUrl.origin).toString();
+    const iconHref = new URL(
+      '/icon-drift-bet.jpg',
+      requestUrl.origin,
+    ).toString();
+    const baseHref = new URL(
+      '/api/actions/drift/bet',
+      requestUrl.origin,
+    ).toString();
 
     const payload: ActionGetResponse = {
       title: 'Place your F1 bet',
@@ -71,7 +81,9 @@ export const POST = async (req: Request) => {
     const { account, outcome, amount } = await validateInput(req);
 
     // Get the priority fee.
-    const priorityFeePromise = getHeliusPriorityFees();
+    const priorityFeePromise = getHeliusPriorityFees(
+      PRIORITY_FEE_SUBSCRIPTION_ADDRESSES,
+    );
 
     // Set up the Drift client.
     const driftClient = await createDriftClient(account);
