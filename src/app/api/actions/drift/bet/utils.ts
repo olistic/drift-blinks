@@ -21,7 +21,6 @@ import { SOLANA_RPC } from '@/config';
 import { getTokenAddress } from '@/utils/tokens';
 import {
   DRIFT_ENV,
-  LANDO_F1_SGP_WIN_BET_MARKET_INDEX,
   SUB_ACCOUNT_ID,
   USDC_MARKET_INDEX,
   USDC_MINT_ADDRESS,
@@ -121,11 +120,12 @@ export async function createDepositCollateralTransaction(
 
 export async function createPlacePerpMarketOrderInstruction(
   driftClient: DriftClient,
+  marketIndex: number,
   amount: BN,
   outcome: BetOutcome,
 ) {
   const orderParams = getOrderParams(
-    getLandoMarketOrderParams(driftClient, amount, outcome),
+    getPerpMarketOrderParams(driftClient, marketIndex, amount, outcome),
     { marketType: MarketType.PERP },
   );
 
@@ -153,8 +153,9 @@ export async function createPlacePerpMarketOrderInstruction(
   });
 }
 
-export function getLandoMarketOrderParams(
+export function getPerpMarketOrderParams(
   driftClient: DriftClient,
+  marketIndex: number,
   amount: BN,
   outcome: BetOutcome,
 ) {
@@ -164,8 +165,8 @@ export function getLandoMarketOrderParams(
   // FIXME: baseAssetAmount calculation.
 
   // const [bid, ask] = calculateBidAskPrice(
-  //   driftClient.getPerpMarketAccount(LANDO_F1_SGP_WIN_BET_MARKET_INDEX)!.amm,
-  //   driftClient.getOracleDataForPerpMarket(LANDO_F1_SGP_WIN_BET_MARKET_INDEX),
+  //   driftClient.getPerpMarketAccount(marketIndex)!.amm,
+  //   driftClient.getOracleDataForPerpMarket(marketIndex),
   // );
   // // If user is going long then they are hitting asks, and vice-versa.
   // const priceToUse = direction === PositionDirection.LONG ? ask : bid;
@@ -184,7 +185,7 @@ export function getLandoMarketOrderParams(
   return getMarketOrderParams({
     baseAssetAmount: new BN(1).mul(BASE_PRECISION),
     direction,
-    marketIndex: LANDO_F1_SGP_WIN_BET_MARKET_INDEX,
+    marketIndex,
   });
 }
 
