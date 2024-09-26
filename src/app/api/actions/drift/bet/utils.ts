@@ -21,6 +21,8 @@ import { SOLANA_RPC } from '@/config';
 import { getTokenAddress } from '@/utils/tokens';
 import {
   DRIFT_ENV,
+  PERP_MARKET_INDEXES,
+  SPOT_MARKET_INDEXES,
   SUB_ACCOUNT_ID,
   USDC_MARKET_INDEX,
   USDC_MINT_ADDRESS,
@@ -138,8 +140,8 @@ export async function createPlacePerpMarketOrderInstruction(
   const remainingAccounts = driftClient.getRemainingAccounts({
     userAccounts: [],
     useMarketLastSlotCache: false,
-    readablePerpMarketIndex: orderParams.marketIndex,
-    readableSpotMarketIndexes: [USDC_MARKET_INDEX],
+    readablePerpMarketIndex: PERP_MARKET_INDEXES,
+    readableSpotMarketIndexes: SPOT_MARKET_INDEXES,
   });
 
   return await driftClient.program.instruction.placePerpOrder(orderParams, {
