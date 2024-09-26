@@ -14,6 +14,7 @@ import {
   PRIORITY_FEE_SUBSCRIPTION_ADDRESSES,
   SOL_PERP_MARKET_INDEX,
   SUB_ACCOUNT_ID,
+  USDC_PRECISION,
 } from './constants';
 import type { BetOutcome } from './types';
 import {
@@ -25,7 +26,7 @@ import {
 } from './utils';
 
 const DEFAULT_MARKET_INDEX = SOL_PERP_MARKET_INDEX;
-const DEFAULT_USDC_AMOUNT: BN = new BN(5);
+const DEFAULT_USDC_AMOUNT: BN = new BN(5).mul(USDC_PRECISION);
 const DEFAULT_OUTCOME: BetOutcome = 'yes';
 
 // Create the standard headers for this route (including CORS).
