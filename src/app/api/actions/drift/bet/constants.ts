@@ -36,12 +36,12 @@ export const PERP_MARKET_INDEXES = [
 // Actions metadata.
 export const METADATA_BY_MARKET_INDEX = {
   [TRUMP_WIN_2024_BET_MARKET_INDEX]: {
-    title: 'Place your Trump bet',
+    title: 'Place your 2024 presidential election bet',
     description: 'Will Donald Trump win the 2024 Presidential Election?',
     resolvesOn: new Date('2024-11-06T00:00Z'),
   },
   [KAMALA_POPULAR_VOTE_2024_BET_MARKET_INDEX]: {
-    title: 'Place your Kamala bet',
+    title: 'Place your 2024 popular vote bet',
     description: 'Will Kamala Harris win the popular vote in 2024?',
     resolvesOn: new Date('2024-11-06T00:00Z'),
   },
