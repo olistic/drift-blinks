@@ -22,6 +22,9 @@ import {
   parseAmount,
 } from './utils';
 
+const DEFAULT_USDC_AMOUNT: BN = new BN(5);
+const DEFAULT_OUTCOME: BetOutcome = 'yes';
+
 // Create the standard headers for this route (including CORS).
 const headers = createActionHeaders();
 
@@ -47,11 +50,11 @@ export const GET = async (req: Request) => {
         actions: [
           {
             label: 'Bet YES',
-            href: `${baseHref}?outcome=yes&amount=5`,
+            href: `${baseHref}?outcome=yes`,
           },
           {
             label: 'Bet NO',
-            href: `${baseHref}?outcome=no&amount=5`,
+            href: `${baseHref}?outcome=no`,
           },
         ],
       },
@@ -78,7 +81,8 @@ export const OPTIONS = async () => {
 export const POST = async (req: Request) => {
   try {
     // Validate the client provided input.
-    const { account, outcome, amount } = await validateInput(req);
+    const { account } = await validatePayload(req);
+    const { amount, outcome } = await validateQueryParams(req);
 
     // Get the priority fee.
     const priorityFeePromise = getHeliusPriorityFees(
@@ -138,10 +142,35 @@ export const POST = async (req: Request) => {
   }
 };
 
-async function validateInput(req: Request) {
-  const body: ActionPostRequest = await req.json();
-
+async function validateQueryParams(req: Request) {
   const requestUrl = new URL(req.url);
+
+  let amount: BN = DEFAULT_USDC_AMOUNT;
+  const amountParam = requestUrl.searchParams.get('amount')!;
+  if (amountParam) {
+    try {
+      amount = parseAmount(amountParam);
+      if (amount.isZero() || amount.isNeg()) throw new Error();
+    } catch {
+      throw 'Invalid "amount" provided.';
+    }
+  }
+
+  let outcome: BetOutcome = DEFAULT_OUTCOME;
+  const outcomeParam = requestUrl.searchParams.get('outcome');
+  if (outcomeParam) {
+    if (outcomeParam !== 'yes' && outcomeParam !== 'no') {
+      throw 'Invalid "outcome" provided.';
+    }
+
+    outcome = outcomeParam;
+  }
+
+  return { amount, outcome };
+}
+
+async function validatePayload(req: Request) {
+  const body: ActionPostRequest = await req.json();
 
   let account: PublicKey;
   try {
@@ -150,21 +179,7 @@ async function validateInput(req: Request) {
     throw 'Invalid "account" provided.';
   }
 
-  const outcomeParam = requestUrl.searchParams.get('outcome');
-  if (outcomeParam !== 'yes' && outcomeParam !== 'no') {
-    throw 'Invalid "outcome" provided.';
-  }
-  const outcome: BetOutcome = outcomeParam;
-
-  let amount: BN;
-  try {
-    const amountParam = requestUrl.searchParams.get('amount')!;
-    amount = parseAmount(amountParam);
-  } catch {
-    throw 'Invalid "amount" provided.';
-  }
-
-  return { account, outcome, amount };
+  return { account };
 }
 
 function createErrorResponse(message: string) {
