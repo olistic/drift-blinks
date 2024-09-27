@@ -18,18 +18,24 @@ import {
 import { Connection, Keypair, Transaction } from '@solana/web3.js';
 
 import { SOLANA_RPC } from '@/config';
+import { USDC_MINT_ADDRESS } from '@/constants';
 import { getTokenAddress } from '@/utils/tokens';
 import {
   DRIFT_ENV,
+  METADATA_BY_MARKET_INDEX,
   PERP_MARKET_INDEXES,
   SPOT_MARKET_INDEXES,
   SUB_ACCOUNT_ID,
   USDC_MARKET_INDEX,
-  USDC_MINT_ADDRESS,
-  USDC_PRECISION,
 } from './constants';
 
 export type BetOutcome = 'yes' | 'no';
+
+export function getMetadata(marketIndex: number) {
+  return METADATA_BY_MARKET_INDEX[
+    marketIndex as keyof typeof METADATA_BY_MARKET_INDEX
+  ];
+}
 
 export function createDriftClient(account: PublicKey) {
   const connection = new Connection(SOLANA_RPC, {
@@ -155,6 +161,8 @@ function createThrowawayWallet(publicKey?: PublicKey): IWallet {
 
   return newWallet;
 }
+
+const USDC_PRECISION = new BN(10).pow(new BN(6));
 
 function getPerpMarketOrderParams(
   driftClient: DriftClient,

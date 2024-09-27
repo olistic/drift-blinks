@@ -1,35 +1,32 @@
+import { USDC_MINT_ADDRESS } from '@/constants';
 import {
-  createPostResponse,
-  type ActionGetResponse,
-  type ActionPostResponse,
-} from '@solana/actions';
-
-import {
+  createAugmentedPostResponse,
   createErrorResponse,
   createSuccessResponse,
   validatePayload,
+  type ActionAugmentedGetResponse,
+  type ActionAugmentedPostResponse,
 } from '@/utils/actions';
 import { getHeliusPriorityFees } from '@/utils/helius';
 import { clamp } from '@/utils/math';
 import {
-  METADATA_BY_MARKET_INDEX,
   PRIORITY_FEE_SUBSCRIPTION_ADDRESSES,
   SOL_PERP_MARKET_INDEX,
   SUB_ACCOUNT_ID,
-  USDC_PRECISION,
 } from './constants';
 import {
   BN,
   createDepositCollateralTransaction,
   createDriftClient,
   createPlacePerpMarketOrderInstruction,
+  getMetadata,
   parseAmount,
   parseOutcome,
   type BetOutcome,
 } from './utils';
 
 const DEFAULT_MARKET_INDEX = SOL_PERP_MARKET_INDEX;
-const DEFAULT_USDC_AMOUNT: BN = new BN(5).mul(USDC_PRECISION);
+const DEFAULT_USDC_AMOUNT: BN = parseAmount('5');
 const DEFAULT_OUTCOME: BetOutcome = 'yes';
 
 export const GET = async (req: Request) => {
@@ -48,17 +45,14 @@ export const GET = async (req: Request) => {
       requestUrl.origin,
     ).toString();
 
-    const { title, description, resolvesOn } =
-      METADATA_BY_MARKET_INDEX[
-        marketIndex as keyof typeof METADATA_BY_MARKET_INDEX
-      ];
+    const { title, description, resolvesOn } = getMetadata(marketIndex);
 
     const didResolve = new Date() > resolvesOn;
 
-    const payload: ActionGetResponse = {
+    const payload: ActionAugmentedGetResponse = {
       title,
-      icon: iconHref,
       description,
+      icon: iconHref,
       ...(didResolve
         ? {
             disabled: true,
@@ -78,6 +72,7 @@ export const GET = async (req: Request) => {
                 },
               ],
             },
+            tokens: [USDC_MINT_ADDRESS],
           }),
     };
 
@@ -142,11 +137,20 @@ export const POST = async (req: Request) => {
     // Set the fee payer.
     transaction.feePayer = account;
 
-    const payload: ActionPostResponse = await createPostResponse({
-      fields: {
-        transaction,
-      },
-    });
+    const { symbol } = getMetadata(marketIndex);
+    const payload: ActionAugmentedPostResponse =
+      await createAugmentedPostResponse({
+        fields: {
+          transaction,
+          success: {
+            message: 'Good luck.',
+            cta: {
+              label: 'View position on Drift',
+              href: `https://app.drift.trade/bet/${symbol}?authority=${account.toBase58()}`,
+            },
+          },
+        },
+      });
 
     return createSuccessResponse(payload);
   } catch (err) {
