@@ -1,12 +1,14 @@
 import {
-  createActionHeaders,
   createPostResponse,
   type ActionGetResponse,
-  type ActionPostRequest,
   type ActionPostResponse,
 } from '@solana/actions';
-import { PublicKey } from '@solana/web3.js';
 
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  validatePayload,
+} from '@/utils/actions';
 import { getHeliusPriorityFees } from '@/utils/helius';
 import { clamp } from '@/utils/math';
 import {
@@ -16,21 +18,19 @@ import {
   SUB_ACCOUNT_ID,
   USDC_PRECISION,
 } from './constants';
-import type { BetOutcome } from './types';
 import {
   BN,
   createDepositCollateralTransaction,
   createDriftClient,
   createPlacePerpMarketOrderInstruction,
   parseAmount,
+  parseOutcome,
+  type BetOutcome,
 } from './utils';
 
 const DEFAULT_MARKET_INDEX = SOL_PERP_MARKET_INDEX;
 const DEFAULT_USDC_AMOUNT: BN = new BN(5).mul(USDC_PRECISION);
 const DEFAULT_OUTCOME: BetOutcome = 'yes';
-
-// Create the standard headers for this route (including CORS).
-const headers = createActionHeaders();
 
 export const GET = async (req: Request) => {
   try {
@@ -81,22 +81,17 @@ export const GET = async (req: Request) => {
           }),
     };
 
-    return Response.json(payload, {
-      headers,
-    });
+    return createSuccessResponse(payload);
   } catch (err) {
     console.log(err);
     let message = 'An unknown error occurred';
     if (typeof err == 'string') message = err;
-    return new Response(message, {
-      status: 400,
-      headers,
-    });
+    return createErrorResponse(message);
   }
 };
 
 export const OPTIONS = async () => {
-  return new Response(null, { headers });
+  return createSuccessResponse(null);
 };
 
 export const POST = async (req: Request) => {
@@ -153,9 +148,7 @@ export const POST = async (req: Request) => {
       },
     });
 
-    return Response.json(payload, {
-      headers,
-    });
+    return createSuccessResponse(payload);
   } catch (err) {
     console.log(err);
     let message = 'Oops! Something went wrong, please try again.';
@@ -191,32 +184,12 @@ async function validateQueryParams(req: Request) {
   let outcome: BetOutcome = DEFAULT_OUTCOME;
   const outcomeParam = requestUrl.searchParams.get('outcome');
   if (outcomeParam) {
-    if (outcomeParam !== 'yes' && outcomeParam !== 'no') {
+    try {
+      outcome = parseOutcome(outcomeParam);
+    } catch {
       throw 'Invalid "outcome" provided.';
     }
-
-    outcome = outcomeParam;
   }
 
   return { marketIndex, amount, outcome };
-}
-
-async function validatePayload(req: Request) {
-  const body: ActionPostRequest = await req.json();
-
-  let account: PublicKey;
-  try {
-    account = new PublicKey(body.account);
-  } catch {
-    throw 'Invalid "account" provided.';
-  }
-
-  return { account };
-}
-
-function createErrorResponse(message: string) {
-  return new Response(message, {
-    status: 400,
-    headers,
-  });
 }

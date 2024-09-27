@@ -28,26 +28,8 @@ import {
   USDC_MINT_ADDRESS,
   USDC_PRECISION,
 } from './constants';
-import { type BetOutcome } from './types';
 
-export function createThrowawayWallet(publicKey?: PublicKey): IWallet {
-  const newKeypair = publicKey
-    ? new Keypair({
-        publicKey: publicKey.toBytes(),
-        secretKey: new Keypair().publicKey.toBytes(),
-      })
-    : new Keypair();
-
-  const newWallet: IWallet = {
-    publicKey: newKeypair.publicKey,
-    // @ts-ignore
-    signTransaction: () => Promise.resolve(),
-    // @ts-ignore
-    signAllTransactions: () => Promise.resolve(),
-  };
-
-  return newWallet;
-}
+export type BetOutcome = 'yes' | 'no';
 
 export function createDriftClient(account: PublicKey) {
   const connection = new Connection(SOLANA_RPC, {
@@ -155,7 +137,26 @@ export async function createPlacePerpMarketOrderInstruction(
   });
 }
 
-export function getPerpMarketOrderParams(
+function createThrowawayWallet(publicKey?: PublicKey): IWallet {
+  const newKeypair = publicKey
+    ? new Keypair({
+        publicKey: publicKey.toBytes(),
+        secretKey: new Keypair().publicKey.toBytes(),
+      })
+    : new Keypair();
+
+  const newWallet: IWallet = {
+    publicKey: newKeypair.publicKey,
+    // @ts-ignore
+    signTransaction: () => Promise.resolve(),
+    // @ts-ignore
+    signAllTransactions: () => Promise.resolve(),
+  };
+
+  return newWallet;
+}
+
+function getPerpMarketOrderParams(
   driftClient: DriftClient,
   marketIndex: number,
   amount: BN,
@@ -197,6 +198,14 @@ export function parseAmount(amountString: string): BN {
   }
 
   return new BN(+amountString).mul(USDC_PRECISION);
+}
+
+export function parseOutcome(outcome: string): BetOutcome {
+  if (outcome !== 'yes' && outcome !== 'no') {
+    throw new Error('Invalid outcome');
+  }
+
+  return outcome;
 }
 
 export function roundDown(amount: BN, precision: BN): BN {
